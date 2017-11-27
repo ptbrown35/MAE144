@@ -1,6 +1,6 @@
 # This is a general use makefile for robotics cape projects written in C.
 # Just change the target name to match your main source code filename.
-TARGET = rc_project_template
+TARGET = hw1
 
 CC		:= gcc
 LINKER		:= gcc -o
@@ -14,7 +14,7 @@ OBJECTS		:= $(SOURCES:$%.c=$%.o)
 prefix		:= /usr/local
 RM		:= rm -f
 INSTALL		:= install -m 4755
-INSTALLDIR	:= install -d -m 755 
+INSTALLDIR	:= install -d -m 755
 
 LINK		:= ln -s -f
 LINKDIR		:= /etc/roboticscape
@@ -59,4 +59,3 @@ runonboot:
 	@$(MAKE) install --no-print-directory
 	@$(LINK) $(DESTDIR)$(prefix)/bin/$(TARGET) $(LINKDIR)/$(LINKNAME)
 	@echo "$(TARGET) Set to Run on Boot"
-
