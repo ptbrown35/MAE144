@@ -121,7 +121,7 @@ int main(){
 			angles.last_theta_g_raw = angles.theta_g_raw;
 
 			// Print raw angles
-			printf("\n|"); // carriage return because it looks pretty
+			printf("\r|"); // carriage return because it looks pretty
 			printf(" %11.3f |", angles.theta_a_raw);
 			printf(" %11.3f |", angles.theta_g_raw);
 			printf(" %7.3f |", angles.theta_a);
