@@ -3,7 +3,7 @@ close all
 clc
 
 %%
-load('data.mat')
+load('data3.mat')
 
 %%
 
@@ -19,4 +19,4 @@ grid on
 xlabel('time [s]')
 ylabel('theta [rad]')
 
-saveas(figure(1),'data.jpg')
+saveas(figure(1),'data3.jpg')
