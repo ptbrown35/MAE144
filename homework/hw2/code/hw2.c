@@ -14,17 +14,17 @@
 #include <roboticscape.h>
 #include "hw2_config.h"
 
-// Struct for angle stuff
+// Struct for angles
 typedef struct angles_t{
 	float theta_a_raw;
 	float theta_g_raw;
 	float last_theta_g_raw;
-
 	float theta_a;
 	float theta_g;
 	float theta_f;
 }angles_t;
 
+// Struct for filters
 typedef struct filter_t{
 	float lp_coeff[2];
 	float hp_coeff[3];
@@ -33,7 +33,7 @@ typedef struct filter_t{
 // function declarations
 void on_pause_pressed(); // do stuff when paused button is pressed
 void on_pause_released(); // do stuff when paused button is released
-void complimentary_filter();
+void complimentary_filter(); // Complimentary filter
 void zero_filers(); // Zero out filters
 
 // Global Variables
@@ -45,8 +45,11 @@ angles_t angles;
 *
 * hw1 main function contains these critical components
 * - call to rc_initialize() at the beginning
+* - Initialize filters
+* - Initialize IMU
+* - Print header for data
 * - main while loop that checks for EXITING condition
-*		- do stuff
+*		-
 * - rc_cleanup() at the end
 *******************************************************************************/
 int main(){
@@ -69,8 +72,7 @@ int main(){
 	rc_imu_data_t data; // imu struct to hold new data
 	rc_imu_config_t conf = rc_default_imu_config(); // Set imu config struct to defaults
 
-	// Initialize anlges to zero
-	zero_filers();
+	zero_filers(); // Initialize angles to zero
 
 	// Initialize filter coefficients
 	filter.lp_coeff[0] = -(WC*DT-1);
@@ -105,22 +107,21 @@ int main(){
 			if(rc_read_accel_data(&data)<0){
 				printf("read accel data failed\n");
 			}
-			angles.theta_a_raw = -1 * atan2(data.accel[2], data.accel[1]);
+			angles.theta_a_raw = -1 * atan2(data.accel[2], data.accel[1]); // [rad]
 
-			// Get gyro data and integrate
+			// Get gyro data and integrate to angle
 			if(rc_read_gyro_data(&data)<0){
 				printf("read gyro data failed\n");
 			}
-			angles.theta_g_raw = angles.last_theta_g_raw  + (data.gyro[0] * DT * DEG_TO_RAD);
+			angles.theta_g_raw = angles.last_theta_g_raw  + (data.gyro[0] * DT * DEG_TO_RAD); // [rad]
 
-			// Complimentary Filter
-			complimentary_filter();
+			complimentary_filter(); // Complimentary Filter
 
-			// Update values
+			// Update integration value
 			angles.last_theta_g_raw = angles.theta_g_raw;
 
 			// Print raw angles
-			printf("\r|"); // carriage return because it looks pretty
+			printf("\n|"); // carriage return because it looks pretty
 			printf(" %11.3f |", angles.theta_a_raw);
 			printf(" %11.3f |", angles.theta_g_raw);
 			printf(" %7.3f |", angles.theta_a);
@@ -150,10 +151,10 @@ int main(){
 /*******************************************************************************
 * void zero_filers()
 *
-* Zero out filter inputs.
+* Zero out filter inputs nad integration values.
 *******************************************************************************/
 void zero_filers(){
-	angles.last_theta_g_raw = 0;
+	angles.last_theta_g_raw = 0; // Zero out for gyro integration
 	angles.theta_a = 0;
 	angles.theta_g = 0;
 	angles.theta_f = 0;
