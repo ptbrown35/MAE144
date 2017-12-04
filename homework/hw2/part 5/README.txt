@@ -29,7 +29,8 @@ is accel_FSR * 9.80665 / 32768.0 to get acceleration in meters per second square
 4G FSR:  0.00119710083
 8G FSR:  0.00239420166
 16G FSR: 0.00478840332
-Also, the gyro conversion factor is gyro_FSR /32768.0.
+* Also, the gyro conversion factor is gyro_FSR /32768.0 to get angular rate in
+degrees per second.
 250DPS FSR:  0.00762939453
 500DPS FSR:  0.01525878906
 1000DPS FSR: 0.03051757812

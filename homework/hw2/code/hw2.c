@@ -3,7 +3,9 @@
 * Author: Parker Brown
 * Date: 12/3/2017
 * Course: MAE 144, Fall 2017
-* Description:
+* Description: Program calculates MIP body angle theta from raw accelerometer
+* and gyroscope data and runs the raw angels through a complimentary filter.
+* hw2.c uses rc_usleep for loop timing and does not use threading.
 *******************************************************************************/
 
 // usefulincludes is a collection of common system includes for the lazy
@@ -49,7 +51,9 @@ angles_t angles;
 * - Initialize IMU
 * - Print header for data
 * - main while loop that checks for EXITING condition
-*		-
+*		- get raw data and convert to angles
+*		- run raw accel and gyro angles through complimentary filter
+*		- print filtered angle
 * - rc_cleanup() at the end
 *******************************************************************************/
 int main(){
@@ -70,11 +74,10 @@ int main(){
 	// Initialize variables used in the while loop
 	int sleep_time = DT * 1e6; // Sleep time to set rough loop rate
 	rc_imu_data_t data; // imu struct to hold new data
-	rc_imu_config_t conf = rc_default_imu_config(); // Set imu config struct to defaults
+	rc_imu_config_t conf = rc_default_imu_config(); // config to defaults
 
+	// Initialize filters
 	zero_filers(); // Initialize angles to zero
-
-	// Initialize filter coefficients
 	filter.lp_coeff[0] = -(WC*DT-1);
 	filter.lp_coeff[1] =  WC*DT;
 	filter.hp_coeff[0] = -(WC*DT-1);
@@ -98,7 +101,7 @@ int main(){
 
   // Keep looping until state changes to EXITING
 	while(rc_get_state()!=EXITING){
-		// If RUNNING, run feedback loop
+		// If RUNNING, run complimentary filter
 		if(rc_get_state()==RUNNING){
 			rc_set_led(GREEN, ON); // GREEN when on
 			rc_set_led(RED, OFF); // RED when paused
@@ -113,7 +116,8 @@ int main(){
 			if(rc_read_gyro_data(&data)<0){
 				printf("read gyro data failed\n");
 			}
-			angles.theta_g_raw = angles.last_theta_g_raw  + (data.gyro[0] * DT * DEG_TO_RAD); // [rad]
+			angles.theta_g_raw = angles.last_theta_g_raw \
+			 									 + (data.gyro[0] * DT * DEG_TO_RAD); // [rad]
 
 			complimentary_filter(); // Complimentary Filter
 

@@ -1,6 +1,6 @@
 # This is a general use makefile for robotics cape projects written in C.
 # Just change the target name to match your main source code filename.
-TARGET = hw2
+TARGET = hw2_isr
 
 CC		:= gcc
 LINKER		:= gcc -o
