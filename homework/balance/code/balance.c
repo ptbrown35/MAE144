@@ -48,8 +48,6 @@ typedef struct filter_t{
 typedef struct controllers_t{
 	float d1_u[3];
 	float d2_u[3];
-
-
 }
 
 // function declarations
@@ -57,7 +55,11 @@ void on_pause_pressed(); // do stuff when paused button is pressed
 void on_pause_released(); // do stuff when paused button is released
 void angles_manager(); // Complimentary filter
 void zero_out(); // Zero out controllers and filters
+float tf2(const float[3] a, const float[3] b, const float[3] u, const float[3] y, float k);
+void d1_ctrl();
+void d2_ctrl();
 void inner_loop(); // IMU interrupt routine
+void* outer_loop(void* ptr);
 void* printf_data(void* ptr); // printf_thread function ot print data
 
 // Global Variables
@@ -134,6 +136,9 @@ int main(){
 	filter.hp_coeff[1] = 1;
 	filter.hp_coeff[2] = -1;
 
+	// Enable motors, put this in arm controller
+	rc_enable_motors();
+
 	// done initializing so set state to RUNNING
 	rc_set_state(RUNNING);
 	rc_set_led(GREEN, ON);  // GREEN when running
@@ -149,6 +154,7 @@ int main(){
 	// Shutdown procedures
 	pthread_join(printf_thread, NULL);
 	pthread_join(outer_thread, NULL);
+	rc_disable_motors();
 	rc_power_off_imu();
 
 	// exit cleanly
@@ -176,6 +182,9 @@ void zero_out(){
 
 	ctrl.d1_u = [0,0,0];
 	ctrl.d1_u = [0,0,0];
+
+	rc_set_encoder_pos(ENCODER_CHANNEL_L,0);
+	rc_set_encoder_pos(ENCODER_CHANNEL_R,0);
 }
 
 /*******************************************************************************
@@ -313,7 +322,7 @@ void inner_loop(){
 		d1_ctrl();
 	}
 	else if(rc_get_state()==PAUSED){
-		rc_set_motor_all(0);
+		rc_set_motor_free_spin_all(); // Set motors to free spin while paused
 		zero_out(); // Zero out everything
 	}
 }
