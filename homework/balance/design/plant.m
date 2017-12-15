@@ -1,6 +1,10 @@
+clear all
+close all
+clc
+
 %% constants
-DT      = .005;         % 100hz controller loop
-DT2     = .01;          % 50hz outer controller loop
+DT      = .005;         % 200hz controller loop
+DT2     = .01;          % 100hz outer controller loop
 m_w     = .027;         % mass of one wheel in Kg 
 m_b     = .180 - 2*m_w; % Mip body mass without wheels 
 R       = .034;         % radius of wheel in m
@@ -21,8 +25,8 @@ I_w = 2 * (I_gb+(m_w*R^2)/2);
  
 % motor equation used: t = e*u - f*w
 e = 2 * tau_s * R_gb; % stall torque of two motors
-f  = e / (w_free/R_gb);   % constant provides zero torque @ free run
- 
+f = e / (w_free/R_gb);   % constant provides zero torque @ free run
+
 %% inner loop plant including motor dynamics
 b = m_b * R * L;
 c = I_r + m_b*L^2;
@@ -39,7 +43,7 @@ G1 = tf(numG1,denG1);
 G1
 disp('G1 poles')
 roots(denG1)
- 
+
 %% outer loop plant
 numG2 = [-(b*c), 0, d];
 denG2 = [a+b, 0,0];
@@ -49,3 +53,49 @@ denG2 = (1/denG2(1))*denG2;
 % make the TF
 G2=tf(numG2,denG2);
 G2
+
+%%
+% 
+% D1 = tf([1 21 20],[1 50.5 -25]);
+% L1 = G1*D1;
+% T1 = G1*D1/(1+G1*D1);
+% 
+% figure(90)
+% bode(G1)
+% figure(91)
+% rlocus(G1)
+% figure(92)
+% bode(L1)
+% figure(93)
+% rlocus(L1)
+
+%%
+
+Ts1 = 0.005; % 200hz
+numD1z = [-5.391 10.21 -4.829];
+denD1z = [1 -1.702 0.7021];
+D1z = tf(numD1z, denD1z, Ts1);
+
+[numD1s, denD1s] = tfdata(d2c(D1z));
+numD1s = numD1s{:};
+denD1s = denD1s{:};
+D1s = tf(numD1s,denD1s)
+
+Ts2 = 0.01; % 100hz
+numD2z = [0.28 -0.5581 0.2781];
+denD2z = [1 -1.86 0.8605];
+D2z = tf(numD2z, denD2z, Ts2);
+
+[numD2s, denD2s] = tfdata(d2c(D2z));
+numD2s = numD2s{:};
+denD2s = denD2s{:};
+D2s = tf(numD2s,denD2s)
+
+
+%%
+% 
+% step()
+% pade()
+% bode()
+% rlocus()
+% tf()
