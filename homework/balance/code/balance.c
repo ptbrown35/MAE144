@@ -27,18 +27,15 @@ typedef enum arm_state_t{
 // Struct for angles
 typedef struct angles_t{
 	float theta_a_raw;
-	float theta_g_raw;
-	float last_theta_g_raw;
+	float theta_g_raw[2];
 	float theta_a;
 	float theta_g;
-	float theta;
-	float last_theta;
-	float last_last_theta;
+	float theta[3];
+	float theta_error[3];
 
-	float phi;
-	float last_phi;
-	float last_last_phi;
-
+	float phi[3];
+	float phi_error[3];
+	float phi_ref;
 }angles_t;
 
 // Struct for filters
@@ -47,17 +44,26 @@ typedef struct filter_t{
 	float hp_coeff[3];
 } filter_t;
 
+// Struct for D1 controller
+typedef struct controllers_t{
+	float d1_u[3];
+	float d2_u[3];
+
+
+}
+
 // function declarations
 void on_pause_pressed(); // do stuff when paused button is pressed
 void on_pause_released(); // do stuff when paused button is released
-void complimentary_filter(); // Complimentary filter
-void zero_controllers(); // Zero out controllers and filters
+void angles_manager(); // Complimentary filter
+void zero_out(); // Zero out controllers and filters
 void inner_loop(); // IMU interrupt routine
 void* printf_data(void* ptr); // printf_thread function ot print data
 
 // Global Variables
 filter_t filter; // filter struct to hold filter coefficients
 angles_t angles; // angles struct to hold theta angles
+controllers_t ctrl; // d1, d2 controller struct
 rc_imu_data_t data; // imu struct to hold new data
 
 /*******************************************************************************
@@ -85,6 +91,7 @@ int main(){
 
 	// Initialize imu
 	rc_imu_config_t conf = rc_default_imu_config(); // imu config to defaults
+	conf.dmp_sample_rate = INNER_RATE;
 	if(rc_initialize_imu(&data, conf)){
 		fprintf(stderr,"rc_initialize_imu_failed\n");
 		return -1;
@@ -102,18 +109,25 @@ int main(){
 
 	// Check min/max sched_priority
 	printf("Valid priority range for SCHED_FIFO: %d - %d\n",
-		sched_get_priority_min(SCHED_FIFO),
-		sched_get_priority_max(SCHED_FIFO));
+				 sched_get_priority_min(SCHED_FIFO),
+				 sched_get_priority_max(SCHED_FIFO));
+
+	// Start printf_thread
+	pthread_t outer_thread;
+	struct sched_param outer_params;
+	params.sched_priority = 60; // Reasonably low priority
+	pthread_create(&outer_thread, NULL, outer_loop, (void*) NULL);
+	pthread_setschedparam(outer_thread, SCHED_FIFO, &outer_params);
 
 	// Start printf_thread
 	pthread_t printf_thread;
-	struct sched_param params;
-	params.sched_priority = 10; // Reasonably low priority
+	struct sched_param printf_params;
+	params.sched_priority = 20; // Reasonably low priority
 	pthread_create(&printf_thread, NULL, printf_data, (void*) NULL);
-	pthread_setschedparam(printf_thread, SCHED_FIFO, &params);
+	pthread_setschedparam(printf_thread, SCHED_FIFO, &printf_params);
 
 	// Initialize filter variables
-	zero_controllers(); // Initialize controllers to zero
+	zero_out(); // Initialize filters and controllers to zero
 	filter.lp_coeff[0] = -(WC*DT_INNER-1);
 	filter.lp_coeff[1] =  WC*DT_INNER;
 	filter.hp_coeff[0] = -(WC*DT_INNER-1);
@@ -134,6 +148,7 @@ int main(){
 
 	// Shutdown procedures
 	pthread_join(printf_thread, NULL);
+	pthread_join(outer_thread, NULL);
 	rc_power_off_imu();
 
 	// exit cleanly
@@ -142,54 +157,86 @@ int main(){
 }
 
 /*******************************************************************************
-* void zero_controllers()
+* void zero_out()
 *
 * Zero out filter inputs nad integration values.
 *******************************************************************************/
-void zero_controllers(){
-	angles.last_theta_g_raw = 0; // Zero out for gyro integration
+void zero_out(){
+	// A whole bunch more things need to be zeroed!!!
+	angles.theta_a_raw = 0;
+	angles.theta_g_raw = [0,0];
 	angles.theta_a = 0;
 	angles.theta_g = 0;
-	angles.theta = 0;
+	angles.theta = [0,0,0];
+	angles.theta_error = [0,0,0];
+
+	angles.phi = [0,0,0];
+	angles.phi_error = [0,0,0];
+	angles.phi_ref = 0;
+
+	ctrl.d1_u = [0,0,0];
+	ctrl.d1_u = [0,0,0];
 }
 
 /*******************************************************************************
-* void complimentary_filter()
+* void angles_manager()
 *
 * Complimentary filter built by summing high and low pass fitlers applied to
 * raw theta values from accel and gyro data, respectively.
 *******************************************************************************/
-void complimentary_filter(){
+void angles_manager(){
+	float wheelAngleL = 0;
+	float wheelAngleR = 0;
+
+	// Complimentary Filter start
 	angles.theta_a_raw = -1.0 * atan2(data.accel[2], data.accel[1]); // theta [rad]
-	angles.theta_g_raw = angles.last_theta_g_raw \
+	angles.theta_g_raw[0] = angles.theta_g_raw[1] \
 										+ (data.gyro[0] * DT_INNER * DEG_TO_RAD); // theta [rad]
 	// First order Low Pass filter of theta from raw accel data
 	angles.theta_a = (filter.lp_coeff[0] * angles.theta_a) \
 								 + (filter.lp_coeff[1] * angles.theta_a_raw);
   // First order high pass filter of theta from raw gyro data
 	angles.theta_g = (filter.hp_coeff[0] * angles.theta_g) \
-	 							 + (filter.hp_coeff[1] * angles.theta_g_raw) \
-								 + (filter.hp_coeff[2] * angles.last_theta_g_raw);
+	 							 + (filter.hp_coeff[1] * angles.theta_g_raw[0]) \
+								 + (filter.hp_coeff[2] * angles.theta_g_raw[1]);
   // Sum of Low and High pass filters of theta
-	angles.theta = angles.theta_a + angles.theta_g;
+	angles.theta[0] = angles.theta_a + angles.theta_g;
 	// Correct for BBBlue mount angle
-	angles.theta += CAPE_MOUNT_ANGLE;
-	// Update integration value
-	angles.last_theta_g_raw = angles.theta_g_raw;
+	angles.theta[0] += CAPE_MOUNT_ANGLE;
+	// Complimentary Filter end
+
+	// Theta error for D1
+	angles.theta_error[0] = angles.theta_ref - angles.theta[0];
+
+	// Update theta values
+	angles.theta_g_raw[1] = angles.theta_g_raw[0]; // Integration value
+	angles.theta[2] = angles.theta[1]; // Hold on for d1
+	angles.theta[1] = angles.theta[0]; // Hold on for d1
+	angles.theta_error[2] = angles.theta_error[1]; // Hold on for d1
+	angles.theta_error[1] = angles.theta_error[0]; // Hold on for d1
+
+	// Get phi for d2 outer controller
+	wheelAngleL = ((rc_get_encoder_pos(ENCODER_CHANNEL_L) * TWO_PI) \
+								/ (ENCODER_POLARITY_L * GEAR_RATIO * ENCODER_RES));
+	wheelAngleR = ((rc_get_encoder_pos(ENCODER_CHANNEL_R) * TWO_PI) \
+								/ (ENCODER_POLARITY_R * GEAR_RATIO * ENCODER_RES));
+	angles.phi[0] = ((wheelAngleL + wheelAngleR)/2) + angles.theta[0];
+	angles.phi_error[0] = angles.phi_ref - angles.phi[0];
 }
 
 /*******************************************************************************
-* float tf(const float[3] a, const float[3] b, const float[3] u, const float[3] y)
+* float tf(const float[3] a, const float[3] b, const float[3] u, const float[3] y, float k)
 *
 * Difference equation for second order transfer function.
-* Input: coefficients a[3] and b[3], inputs u[3], outputs y[3]
+* Input: coefficients numerator a[3] and denominator b[3],
+* old inputs u[3], old outputs y[3]
 *******************************************************************************/
 
-float tf(const float[3] a, const float[3] b, const float[3] u, const float[3] y){
+float tf2(const float[3] a, const float[3] b, const float[3] u, const float[3] y, float k){
 	// Assume a nd b are normalized by a[0]
-	// Compute y[0] for b
+	// Compute y[0] for denominator b
   for(int j = 0; j < 3; j++){
-    y[0] += b[j] * u[j];
+    y[0] += k * b[j] * u[j];
   }
   // Compute y[0] for a
   for(int k = 1; k < 3; k++){
@@ -200,32 +247,96 @@ float tf(const float[3] a, const float[3] b, const float[3] u, const float[3] y)
 }
 
 /*******************************************************************************
-* void d1_controller()
+* void d1_ctrl()
 *
 * D1 controller.
 *******************************************************************************/
-void d1_controller(){
-	d1_u[0] = tf(D1_DEN, D1_NUM, theta_error, d1_u);
+void d1_ctrl(){
+	float duty = 0;
+
+	// Second order tf for D1 Controller
+	ctrl.d1_u[0] = tf2(D1_DEN, D1_NUM, angles.theta_error, ctrl.d1_u, D1_GAIN);
+
+	// Saturate D1 Controller output
+	if (ctrl.d1_u[0] > 1.0){
+		ctrl.d1_u[0] = 1.0;
+	}	else if (ctrl.d1_u[0] < -1.0){
+		ctrl.d1_u[0] = -1.0;
+	}
+
+	duty = ctrl.d1_u[0]; // Set duty cycle to write to motors
+	// rc_set_motor(MOTOR_CHANNEL_L, MOTOR_POLARITY_L * duty);
+	// rc_set_motor(MOTOR_CHANNEL_R, MOTOR_POLARITY_R * duty);
+
 	// update values
-	d1_u[2] = d1_u[1];
-	d1_u[1] = d1_u[0];
+	ctrl.d1_u[2] = ctrl.d1_u[1];
+	ctrl.d1_u[1] = ctrl.d1_u[0];
+}
+
+/*******************************************************************************
+* void d2_ctrl()
+*
+* D2 controller.
+*******************************************************************************/
+void d2_ctrl(){
+	// Second order tf for D2 Contoller
+	ctrl.d2_u[0] = tf2(D2_DEN, D2_NUM, angles.phi_error, ctrl.d2_u, D2_GAIN);
+
+	// Saturate d2 controller output
+	if (ctrl.d2_u[0] > THETA_REF_MAX){
+		ctrl.d2_u[0] = THETA_REF_MAX;
+	}	else if (ctrl.d2_u[0] < -THETA_REF_MAX){
+		ctrl.d2_u[0] = -THETA_REF_MAX;
+	}
+
+	// Theta reference set by d2 passed to
+	// angles.theta_ref = ctrl.d2_u[0]; // uncomment to close outer loop
+
+	// update values
+	ctrl.d1_u[2] = ctrl.d1_u[1];
+	ctrl.d1_u[1] = ctrl.d1_u[0];
+	angles.phi[2] = angles.phi[1];
+	angles.phi[1] = angles.phi[0];
+	angles.phi_error[2] = angles.phi_error[1];
+	angles.phi_error[1] = angles.phi_error[0];
 }
 
 /*******************************************************************************
 * void inner_loop()
 *
-* Gets imu data using rc_set_imu_interrupt_func(&inner_loop)
+* Inner (fast) loop at 200hz.
 *******************************************************************************/
 void inner_loop(){
 	// If RUNNING, run Complimentary Filter
 	if(rc_get_state()==RUNNING){
-		complimentary_filter(); // Complimentary Filter
-		d1_controller();
-
+		angles_manager(); // Complimentary Filter
+		d1_ctrl();
 	}
 	else if(rc_get_state()==PAUSED){
-		zero_controllers(); // Reset filters when paused
+		rc_set_motor_all(0);
+		zero_out(); // Zero out everything
 	}
+}
+
+/*******************************************************************************
+* void outer_loop()
+*
+* Gets imu data using rc_set_imu_interrupt_func(&inner_loop)
+*******************************************************************************/
+void* outer_loop(void* ptr){
+
+	while(rc_get_state()!=EXITING){
+		// If RUNNING, run Complimentary Filter
+		if(rc_get_state()==RUNNING){
+			d2_ctrl();
+		}
+		else if(rc_get_state()==PAUSED){
+			// zero_out(); // Zero out everything
+		}
+
+		rc_usleep(1000000 / OUTER_RATE); // Sleep to set 20HZ print rate
+	}
+	return NULL;
 }
 
 /*******************************************************************************
@@ -240,14 +351,15 @@ void* printf_data(void* ptr){
 		new_rc_state = rc_get_state();
 		// check if this is the first time since being paused
 		if(new_rc_state==RUNNING && last_rc_state!=RUNNING){
-			printf("\nRUNNING: Complimentary Filter, theta in [rad].\n");
-			// Print header for standard output
-			printf("| theta_a_raw |");
-			printf(" theta_g_raw |");
-			printf(" theta_a |");
-			printf(" theta_g |");
-			printf(" theta |");
-			printf(" \n");
+			printf("\nRUNNING: Hold upright to balance.\n");
+			printf("    θ    |");
+			printf("  θ_ref  |");
+			printf("    φ    |");
+			printf("  φ_ref  |");
+			printf("  d1_u   |");
+			printf("  d2_u   |");
+			printf("arm_state|");
+			printf("\n");
 		}
 		else if(new_rc_state==PAUSED && last_rc_state!=PAUSED){
 			// first time sonce being paused
@@ -258,11 +370,15 @@ void* printf_data(void* ptr){
 		if(new_rc_state == RUNNING){
 			// Print raw angles
 			printf("\r|"); // carriage return because it looks pretty
-			printf(" %11.3f |", angles.theta_a_raw);
-			printf(" %11.3f |", angles.theta_g_raw);
-			printf(" %7.3f |", angles.theta_a);
-			printf(" %7.3f |", angles.theta_g);
-			printf(" %7.3f |", angles.theta);
+			printf(" %7.3f |", angles.theta[0]);
+			printf(" %7.3f |", angles.theta_ref);
+			printf(" %7.3f |", angles.phi[0]);
+			printf(" %7.3f |", angles.phi_ref);
+			printf(" %7.3f |", angles.d1_u[0]);
+			printf(" %7.3f |", angles.d2_u[0]);.
+
+			// if(setpoint.arm_state == ARMED) printf("  ARMED  |");
+			// else printf("DISARMED |");
 			fflush(stdout);
 		}
 

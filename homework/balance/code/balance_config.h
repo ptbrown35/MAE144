@@ -8,7 +8,7 @@
 #define BALANCE_CONFIG
 
 // Set constants
-#define	INNER_RATE 100 // Loop rate
+#define	INNER_RATE 200 // Loop rate
 #define	OUTER_RATE 20 // Loop rate
 #define	DT_INNER 0.005 // 1/SAMPLE_RATE_HZ
 #define	DT_OUTER 0.05 // 1/SAMPLE_RATE_HZ
@@ -28,15 +28,15 @@
 // inner loop controller: 200hz
 #define D1_GAIN 0.8
 #define D1_ORDER 2
-#define D1_NUM {-6.289, 11.910, -5.634 }
-#define D1_DEN { 1.000, -1.702,  0.702 }
+#define D1_NUM {-6.289, 11.910, -5.634}
+#define D1_DEN { 1.000, -1.702,  0.702}
 #define D1_SATURATION_TIMEOUT	0.5
 
-// outer loop controller: 200hz
+// outer loop controller: 20hz
 #define D2_GAIN 0.7
 #define	D2_ORDER 1
-#define D2_NUM { 0.3858, -0.3853 }
-#define D2_DEN { 1.0000, -0.9277 }
+#define D2_NUM {0.18856,  -0.37209,  0.18354}
+#define D2_DEN {0.18856,  -0.37209,  0.18354}
 #define THETA_REF_MAX 0.37
 
 #define TAU 2 // Filter time constant
