@@ -70,16 +70,16 @@ K1 = -4.95;
 
 D1 = K1*D1;
 % 
-% L1 = G1*D1;
+L1 = G1*D1;
 % 
 % figure(52)
 % rlocus(L1)
 % figure(53)
-% bode(L1)
+% margin(L1)
 % figure(54)
 % bode(L1/(1+L1))
-% figure(55)
-% step(L1/(1+L1))
+figure(55)
+step(L1/(1+L1))
 
 D1z = c2d(D1,DT1)
 
@@ -103,13 +103,33 @@ L2 = G2*D2;
 % figure(62)
 % rlocus(L2)
 % figure(63)
-% bode(L2)
+% margin(L2)
 % figure(64)
 % bode(L2/(1+L2))
 % figure(65)
 % step(L2/(1+L2))
 
+T1 = L1/(1+L1);
+
+% figure(66)
+% step(L2*T1/(1+L2*T1))
+% figure(67)
+% margin(L2*T1/(1+L2*T1))
+
 D2z = c2d(D2,DT2)
+
+%%
+
+% D1 = d2c(tf([-4.9445, 8.862, -3.967],[1, -1.481, 0.4812], 0.01));
+% D2 = d2c(tf([0.1636, -0.16289],[1, -0.6326], 0.05));
+% 
+% L1 = G1*D1;
+% L2 = G2*D2;
+% 
+% T1 = L1/(1+L1);
+% 
+% figure(70)
+% step(L2*T1/(1+L2*T1))
 
 %%
 % 
