@@ -7,7 +7,7 @@
 #ifndef BALANCE_CONFIG
 #define BALANCE_CONFIG
 
-#define SAMPLE_RATE_HZ 200	// main filter and control loop speed
+#define SAMPLE_RATE_HZ 100	// main filter and control loop speed
 #define DT 0.005			// 1/sample_rate
 
 // Structural properties of eduMiP
@@ -18,7 +18,7 @@
 #define TRACK_WIDTH_M			0.035
 #define V_NOMINAL				7.4
 
-
+/*
 // inner loop controller 200hz old
 #define D1_GAIN					0.8
 #define D1_ORDER				2
@@ -32,23 +32,23 @@
 #define D2_NUM					{ 0.3858, -0.3853 }
 #define D2_DEN					{ 1.0000, -0.9277 }
 #define THETA_REF_MAX			0.37
-
-/*
-// // inner loop controller 100hz new
-#define 	D1_GAIN					1.05
-#define 	D1_ORDER				2
-#define 	D1_NUM					{-4.945, 8.862, -3.967}
-#define 	D1_DEN					{ 1.000, -1.481, 0.4812}
-#define 	D1_SATURATION_TIMEOUT	0.4
-
-
-// outer loop controller new 100hz
-#define 	D2_GAIN					0.9
-#define		D2_ORDER				2
-#define 	D2_NUM					{0.18856,  -0.37209,  0.18354}
-#define 	D2_DEN					{1.00000,  -1.86046,   0.86046}
-#define 	THETA_REF_MAX			0.33
 */
+
+// inner loop controller: 100hz
+#define D1_GAIN 1.0
+#define D1_ORDER 2
+#define D1_NUM {-4.9500,  8.8709, -3.9709}
+#define D1_DEN { 1.0000, -1.4810,  0.4812}
+#define D1_SAT 1
+#define D1_SATURATION_TIMEOUT	0.5
+
+// outer loop controller: 20hz
+#define D2_GAIN 1.0
+#define	D2_ORDER 1
+#define D2_NUM {1.0000, -0.9961}
+#define D2_DEN {1.0000, -0.6065}
+#define THETA_REF_MAX 0.3
+
 // steering controller
 #define D3_KP					1.0
 #define D3_KI					0.3

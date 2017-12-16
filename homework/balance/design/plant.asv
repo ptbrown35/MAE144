@@ -61,14 +61,14 @@ G2
 % rlocus(G1)
 % figure(51)
 % bode(G1)
-
-numD1 = conv([1, 6.4742],[1, 22.0258]);
-denD1 = conv([1, 0.0386],[1, 73.1114]);
-
-D1 = tf(numD1,denD1);
-K1 = -4.95;
-
-D1 = K1*D1;
+% 
+% numD1 = conv([1, 6.4742],[1, 22.0258]);
+% denD1 = conv([1, 0.0386],[1, 73.1114]);
+% 
+% D1 = tf(numD1,denD1);
+% K1 = -4.95;
+% 
+% D1 = K1*D1;
 % 
 % L1 = G1*D1;
 % 
@@ -80,36 +80,36 @@ D1 = K1*D1;
 % bode(L1/(1+L1))
 % figure(55)
 % step(L1/(1+L1))
-
-D1z = c2d(D1,DT1)
+% 
+% D1z = c2d(D1,DT1)
 
 %% D2 Design
-% 
-% figure(60)
-% rlocus(-G2)
-% figure(61)
-% bode(-G2)
 
-numD2 = [1, 0.1];
-denD2 = [1, 10];
+figure(60)
+rlocus(G2)
+figure(61)
+bode(G2)
+
+numD2 = conv([1, 6.4742],[1, 22.0258]);
+denD2 = conv([1, 0.0386],[1, 73.1114]);
 
 D2 = tf(numD2,denD2);
-K2 = 1;
+K2 = -4.95;
 
 D2 = K2*D2;
 
 L2 = G2*D2;
-% 
-% figure(62)
-% rlocus(L2)
-% figure(63)
-% bode(L2)
-% figure(64)
-% bode(L2/(1+L2))
-% figure(65)
-% step(L2/(1+L2))
 
-D2z = c2d(D2,DT2)
+figure(62)
+rlocus(L2)
+figure(63)
+bode(L2)
+figure(64)
+bode(L2/(1+L2))
+figure(65)
+step(L2/(1+L2))
+
+% D2z = c2d(D2,DT2)
 
 %%
 % 

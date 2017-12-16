@@ -31,14 +31,15 @@
 #define D1_ORDER 2
 #define D1_NUM {-4.9500,  8.8709, -3.9709}
 #define D1_DEN { 1.0000, -1.4810,  0.4812}
+#define D1_SAT 1
 #define D1_SATURATION_TIMEOUT	0.5
 
 // outer loop controller: 20hz
 #define D2_GAIN 1.0
 #define	D2_ORDER 1
-#define D2_NUM {1.0000, -0.9961, 0.00}
-#define D2_DEN {1.0000, -0.6065, 0.00}
-#define THETA_REF_MAX 0.3
+#define D2_NUM {1.0000, -0.9961}
+#define D2_DEN {1.0000, -0.6065}
+#define D2_SAT 0.3
 
 // Arming conditions
 #define TIP_ANGLE 0.85
